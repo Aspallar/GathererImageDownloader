@@ -16,6 +16,8 @@ namespace GathererImageDownloader
         //List of sets we want to skip so we don't use their art or flavor text
         List<string> setsToSkip = new List<string> { "EXP" }; // EXP is the BFZ Expeditions set
 
+        public bool DownloadImages { get; set; }
+
         /// <summary>
         /// Constructor of this class
         /// </summary>
@@ -94,7 +96,8 @@ namespace GathererImageDownloader
                 }
 
                 //Download the image if needed and write the card's info to lua
-                DownloadCardImage(cardData);
+                if (DownloadImages)
+                    DownloadCardImage(cardData);
                 WriteCardInfo(cardData);
             }
             else //Otherwise
@@ -160,7 +163,11 @@ namespace GathererImageDownloader
             WriteMultiLineLuaString("Text", cardData["text"]);
             WriteMultiLineLuaString("Flavor", cardData["flavor"]);
             WriteLuaString("Artist", cardData["artist"]);
-            WriteLuaString("CardNumber", cardData["number"]);
+
+            if (cardData["setcode"] == null || (string)cardData["number"] == null)
+                throw new Exception("Card with no setcode and/or number");
+            WriteLuaString("CardNumber", cardData["setcode"] + (string)cardData["number"]);
+
             WriteLuaString("Power", cardData["power"]);
             WriteLuaString("Toughness", cardData["toughness"]);
             WriteLuaInt("Loyalty", cardData["loyalty"]);
@@ -185,6 +192,10 @@ namespace GathererImageDownloader
             }
         }
 
+        private void WriteLuaString(string name, string text)
+        {
+            fileWriter.WriteLine($"{name}=\"{CleanupWikitext(text)}\";");
+        }
 
         private void WriteLuaString(string name, JToken element)
         {

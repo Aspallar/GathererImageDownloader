@@ -7,8 +7,13 @@ namespace GathererImageDownloader
         //This is where the program starts when it is executed
         static void Main(string[] args)
         {
+            bool downloadImages;
+            if (!ProcessCommandLine(args, out downloadImages))
+                return;
+
             Console.WriteLine("Loading JSON data...");
             CardProcessor cardImporter = new CardProcessor("Data/AllSets-x.json");
+            cardImporter.DownloadImages = downloadImages;
 
             Console.WriteLine("Processing main card list");
             cardImporter.ProcessCardList("Lua/Cards.lua", "Data/CardsToUpload.txt");
@@ -20,5 +25,32 @@ namespace GathererImageDownloader
             Console.ReadKey();
         }
 
+        private static bool ProcessCommandLine(string[] args, out bool downloadImages)
+        {
+            downloadImages = true;
+            if (args.Length == 1)
+            {
+                if (args[0].ToLowerInvariant() == "--noimages")
+                {
+                    downloadImages = false;
+                }
+                else
+                {
+                    ShowUsage();
+                    return false;
+                }
+            }
+            else if (args.Length != 0)
+            {
+                ShowUsage();
+                return false;
+            }
+            return true;
+        }
+
+        private static void ShowUsage()
+        {
+            Console.WriteLine("GathererImageDownloader [--noimages]");
+        }
     }
 }
