@@ -8,4 +8,4 @@ This code is not mine. It was given to the admin of [Magic Duels Wiki](http://ma
 
 I've volunteered to fix an outstanding issue with it and need a repository so have placed it here.
 
-It's copyright belongs to [Bercer](http://magicduels.wikia.com/wiki/User:Becer)
+It's copyright belongs to [Becer](http://magicduels.wikia.com/wiki/User:Becer)
