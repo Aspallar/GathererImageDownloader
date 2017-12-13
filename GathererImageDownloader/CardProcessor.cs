@@ -17,6 +17,7 @@ namespace GathererImageDownloader
         List<string> setsToSkip = new List<string> { "EXP" }; // EXP is the BFZ Expeditions set
 
         public bool DownloadImages { get; set; }
+        public bool Verbose { get; set; }
 
         /// <summary>
         /// Constructor of this class
@@ -26,6 +27,8 @@ namespace GathererImageDownloader
         {
             CreateSetList(jsonFile);
             FilterSetList();
+            Verbose = false;
+            DownloadImages = true;
         }
 
         /// <summary>
@@ -90,15 +93,18 @@ namespace GathererImageDownloader
             if (cardData != null) //If card data was found...
             {
                 // Use the inputed override set code if one is present
+                string originalSetCode = (string)cardData["setcode"];
                 if (splitEntry.Length > 1)
                 {
                     cardData["setcode"] = splitEntry[1];
+                    if (Verbose && originalSetCode != splitEntry[1])
+                        Console.WriteLine($"SetCode was changed from {originalSetCode} to {splitEntry[1]} for {(string)cardData["name"]}");
                 }
 
                 //Download the image if needed and write the card's info to lua
                 if (DownloadImages)
                     DownloadCardImage(cardData);
-                WriteCardInfo(cardData);
+                WriteCardInfo(cardData, originalSetCode);
             }
             else //Otherwise
             {
@@ -146,7 +152,7 @@ namespace GathererImageDownloader
         /// Converts a card's JSON data to written LUA for use on the wiki
         /// </summary>
         /// <param name="cardData">JSON data describing a Magic card</param>
-        private void WriteCardInfo(JToken cardData)
+        private void WriteCardInfo(JToken cardData, string originalSetCode)
         {
             fileWriter.Write("{");
             WriteLuaString("Name", cardData["name"]);
@@ -164,9 +170,11 @@ namespace GathererImageDownloader
             WriteMultiLineLuaString("Flavor", cardData["flavor"]);
             WriteLuaString("Artist", cardData["artist"]);
 
-            if (cardData["setcode"] == null || (string)cardData["number"] == null)
-                throw new Exception("Card with no setcode and/or number");
-            WriteLuaString("CardNumber", cardData["setcode"] + (string)cardData["number"]);
+            if ((string)cardData["number"] == null)
+            {
+                throw new Exception("Card with no number " + (string)cardData["name"] + " " + originalSetCode);
+            }
+            WriteLuaString("CardNumber", originalSetCode + (string)cardData["number"]);
 
             WriteLuaString("Power", cardData["power"]);
             WriteLuaString("Toughness", cardData["toughness"]);

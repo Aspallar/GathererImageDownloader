@@ -8,12 +8,19 @@ namespace GathererImageDownloader
         static void Main(string[] args)
         {
             bool downloadImages;
-            if (!ProcessCommandLine(args, out downloadImages))
+            bool verbose;
+            if (!ProcessCommandLine(args, out downloadImages, out verbose))
+            {
+                ShowUsage();
                 return;
+            }
 
             Console.WriteLine("Loading JSON data...");
-            CardProcessor cardImporter = new CardProcessor("Data/AllSets-x.json");
-            cardImporter.DownloadImages = downloadImages;
+            CardProcessor cardImporter = new CardProcessor("Data/AllSets-x.json")
+            {
+                DownloadImages = downloadImages,
+                Verbose = verbose,
+            };
 
             Console.WriteLine("Processing main card list");
             cardImporter.ProcessCardList("Lua/Cards.lua", "Data/CardsToUpload.txt");
@@ -25,32 +32,31 @@ namespace GathererImageDownloader
             Console.ReadKey();
         }
 
-        private static bool ProcessCommandLine(string[] args, out bool downloadImages)
+
+        private static bool ProcessCommandLine(string[] args, out bool downloadImages, out bool verbose)
         {
             downloadImages = true;
-            if (args.Length == 1)
+            verbose = false;
+            foreach (string arg in args)
             {
-                if (args[0].ToLowerInvariant() == "--noimages")
+                switch (arg.ToLowerInvariant())
                 {
-                    downloadImages = false;
+                    case "--noimages":
+                        downloadImages = false;
+                        break;
+                    case "--verbose":
+                        verbose = true;
+                        break;
+                    default:
+                        return false;
                 }
-                else
-                {
-                    ShowUsage();
-                    return false;
-                }
-            }
-            else if (args.Length != 0)
-            {
-                ShowUsage();
-                return false;
             }
             return true;
         }
 
         private static void ShowUsage()
         {
-            Console.WriteLine("GathererImageDownloader [--noimages]");
+            Console.WriteLine("GathererImageDownloader [--noimages] [--verbose]");
         }
     }
 }
