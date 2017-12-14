@@ -45,6 +45,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CardProcessor.cs" />
+    <Compile Include="CardProcessorOptions.cs" />
+    <Compile Include="NoSetCodeException.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

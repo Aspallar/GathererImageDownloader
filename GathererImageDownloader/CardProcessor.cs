@@ -9,6 +9,7 @@ namespace GathererImageDownloader
 {
     class CardProcessor
     {
+        private CardProcessorOptions options;
         private StreamWriter fileWriter; //For writing the Lua files line by line
         private WebClient imageDownloader = new WebClient(); //For downloading images
         private IList<JToken> mtgSets; //The list of magic sets we'll be using
@@ -16,19 +17,15 @@ namespace GathererImageDownloader
         //List of sets we want to skip so we don't use their art or flavor text
         List<string> setsToSkip = new List<string> { "EXP" }; // EXP is the BFZ Expeditions set
 
-        public bool DownloadImages { get; set; }
-        public bool Verbose { get; set; }
-
         /// <summary>
         /// Constructor of this class
         /// </summary>
         /// <param name="jsonFile">JSON file with MTG set data</param>
-        public CardProcessor(string jsonFile)
+        public CardProcessor(string jsonFile, CardProcessorOptions options)
         {
             CreateSetList(jsonFile);
             FilterSetList();
-            Verbose = false;
-            DownloadImages = true;
+            this.options = options;
         }
 
         /// <summary>
@@ -71,7 +68,16 @@ namespace GathererImageDownloader
 
             foreach (string cardEntry in CardsToUpload)
             {
-                ProcessCardEntry(cardEntry);
+                try
+                {
+                    string trimedCardEntry = cardEntry.Trim();
+                    if (trimedCardEntry != "")
+                        ProcessCardEntry(cardEntry);
+                }
+                catch (NoSetCodeException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
             }
 
             fileWriter.WriteLine("};\r\nreturn data");
@@ -84,32 +90,60 @@ namespace GathererImageDownloader
         /// <param name="cardEntry">One line from the input list</param>
         private void ProcessCardEntry(string cardEntry)
         {
+            if (options.Verbose)
+                Console.WriteLine(".." + cardEntry); ;
+
             //First we split up the entry into its relevant parts
             string[] splitEntry = cardEntry.Split('$');
             string cardName = splitEntry[0]; // The name is expected to always be there
 
-            JToken cardData = FindCardData(cardName);
+            string setName = splitEntry.Length > 1 ? splitEntry[1] : "";
+            if (options.UseSpecifiedSet && setName == "")
+                throw new NoSetCodeException("ERROR: No set code supplied for " + cardEntry);
+
+            JToken cardData;
+            if (options.UseSpecifiedSet)
+                cardData = FindCardInSpecificSet(cardName, setName);
+            else
+                cardData = FindCardData(cardName);
 
             if (cardData != null) //If card data was found...
             {
-                // Use the inputed override set code if one is present
                 string originalSetCode = (string)cardData["setcode"];
-                if (splitEntry.Length > 1)
+                if (!options.UseSpecifiedSet)
                 {
-                    cardData["setcode"] = splitEntry[1];
-                    if (Verbose && originalSetCode != splitEntry[1])
-                        Console.WriteLine($"SetCode was changed from {originalSetCode} to {splitEntry[1]} for {(string)cardData["name"]}");
+                    // Use the inputed override set code if one is present
+                    if (setName != "")
+                    {
+                        cardData["setcode"] = setName;
+                        if (options.Verbose && originalSetCode != setName)
+                            Console.WriteLine($"SetCode was changed from {originalSetCode} to {setName} for {cardEntry}");
+                    }
                 }
 
                 //Download the image if needed and write the card's info to lua
-                if (DownloadImages)
+                if (options.DownloadImages)
                     DownloadCardImage(cardData);
                 WriteCardInfo(cardData, originalSetCode);
             }
             else //Otherwise
             {
-                Console.WriteLine($"ERROR: \"{cardName}\" couldn't be found. Typo?");
+                Console.WriteLine($"ERROR: \"{cardEntry}\" couldn't be found. Typo?");
             }
+        }
+
+        private JToken FindCardInSpecificSet(string cardName, string setName)
+        {
+            JToken set = mtgSets.Where(x => x.Path == setName).SingleOrDefault();
+            if (set == null)
+                return null;
+            JToken cardData = FindCardInSet(cardName, set);
+            if (cardData != null)
+            {
+                cardData["name"] = FilterOutUnusableCharacters((string)cardData["name"]); // Cleaning up the card name
+                cardData["setcode"] = setName; // Adding the setcode field to the card data manually
+            }
+            return cardData;
         }
 
         /// <summary>
