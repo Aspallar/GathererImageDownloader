@@ -230,7 +230,14 @@ namespace GathererImageDownloader
             if (!File.Exists(filename))
             {
                 Console.WriteLine($"Downloading image for \"{cardName}\"");
-                imageDownloader.DownloadFile($"http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid={cardData["multiverseid"]}&type=card", filename);
+                try
+                {
+                    imageDownloader.DownloadFile($"http://gatherer.wizards.com/Handlers/Image.ashx?multiverseid={cardData["multiverseid"]}&type=card", filename);
+                }
+                catch (WebException ex)
+                {
+                    Console.WriteLine($"ERROR: Error downloading image for {cardName}. {ex.Message}");
+                }
             }
         }
 
