@@ -32,6 +32,7 @@ namespace GathererImageDownloader
             else
             {
                 Console.WriteLine($"ERROR: MTG card data file \"{cardDataFilename}\" is missing.");
+                Pause();
                 return;
             }
 
